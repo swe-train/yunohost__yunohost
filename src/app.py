@@ -2655,9 +2655,7 @@ def _guess_webapp_path_requirement(app_folder: str) -> str:
     if len(domain_questions) == 1 and len(path_questions) == 1:
         return "domain_and_path"
     if len(domain_questions) == 1 and len(path_questions) == 0:
-
         if manifest.get("packaging_format", 0) < 2:
-
             # This is likely to be a full-domain app...
 
             # Confirm that this is a full-domain app This should cover most cases
@@ -2668,7 +2666,9 @@ def _guess_webapp_path_requirement(app_folder: str) -> str:
 
             # Full-domain apps typically declare something like path_url="/" or path=/
             # and use ynh_webpath_register or yunohost_app_checkurl inside the install script
-            install_script_content = read_file(os.path.join(app_folder, "scripts/install"))
+            install_script_content = read_file(
+                os.path.join(app_folder, "scripts/install")
+            )
 
             if re.search(
                 r"\npath(_url)?=[\"']?/[\"']?", install_script_content
@@ -2678,7 +2678,9 @@ def _guess_webapp_path_requirement(app_folder: str) -> str:
         else:
             # For packaging v2 apps, check if there's a permission with url being a string
             perm_resource = manifest.get("resources", {}).get("permissions")
-            if perm_resource is not None and isinstance(perm_resource.get("main", {}).get("url"), str):
+            if perm_resource is not None and isinstance(
+                perm_resource.get("main", {}).get("url"), str
+            ):
                 return "full_domain"
 
     return "?"
