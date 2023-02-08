@@ -1,6 +1,7 @@
 import ast
 
-print("""---
+print(
+    """---
 title: App resources
 template: docs
 taxonomy:
@@ -9,7 +10,8 @@ routes:
   default: '/packaging_apps_resources'
 ---
 
-""")
+"""
+)
 
 
 fname = "../src/utils/resources.py"
@@ -19,12 +21,15 @@ content = open(fname).read()
 # in which we cant really 'import' the file because it will trigger a bunch of moulinette/yunohost imports...
 tree = ast.parse(content)
 
-ResourceClasses = [c for c in tree.body if isinstance(c, ast.ClassDef) and c.bases and c.bases[0].id == 'AppResource']
+ResourceClasses = [
+    c
+    for c in tree.body
+    if isinstance(c, ast.ClassDef) and c.bases and c.bases[0].id == "AppResource"
+]
 
 ResourceDocString = {}
 
 for c in ResourceClasses:
-
     assert c.body[1].targets[0].id == "type"
     resource_id = c.body[1].value.value
     docstring = ast.get_docstring(c)
