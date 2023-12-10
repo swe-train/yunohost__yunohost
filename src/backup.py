@@ -1554,6 +1554,10 @@ class RestoreManager:
             if not restore_failed:
                 self.targets.set_result("apps", app_instance_name, "Success")
                 operation_logger.success()
+
+                # Call post_app_restore hook
+                env_dict = _make_environment_for_app_script(app_instance_name)
+                hook_callback("post_app_restore", env=env_dict)
             else:
                 self.targets.set_result("apps", app_instance_name, "Error")
 
@@ -2202,7 +2206,7 @@ def backup_create(
 
     # Validate there is no archive with the same name
     if name and name in backup_list()["archives"]:
-        raise YunohostValidationError("backup_archive_name_exists")
+        raise YunohostValidationError("backup_archive_name_exists", name=name)
 
     # By default we backup using the tar method
     if not methods:

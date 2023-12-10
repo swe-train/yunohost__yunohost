@@ -160,11 +160,15 @@ class ConfigPanel:
                 result[key] = {"ask": ask}
                 if "current_value" in option:
                     question_class = OPTIONS[option.get("type", OptionType.string)]
-                    result[key]["value"] = question_class.humanize(
-                        option["current_value"], option
-                    )
+                    if hasattr(question_class, "humanize"):
+                        result[key]["value"] = question_class.humanize(
+                            option["current_value"], option
+                        )
+                    else:
+                        result[key]["value"] = option["current_value"]
+
                     # FIXME: semantics, technically here this is not about a prompt...
-                    if question_class.hide_user_input_in_prompt:
+                    if getattr(question_class, "hide_user_input_in_prompt", None):
                         result[key][
                             "value"
                         ] = "**************"  # Prevent displaying password in `config get`
@@ -341,14 +345,21 @@ class ConfigPanel:
                 "defaults": {"version": 1.0},
             },
             "panels": {
-                "properties": ["name", "services", "actions", "help"],
+                "properties": ["name", "services", "actions", "help", "bind"],
                 "defaults": {
                     "services": [],
                     "actions": {"apply": {"en": "Apply"}},
                 },
             },
             "sections": {
-                "properties": ["name", "services", "optional", "help", "visible"],
+                "properties": [
+                    "name",
+                    "services",
+                    "optional",
+                    "help",
+                    "visible",
+                    "bind",
+                ],
                 "defaults": {
                     "name": "",
                     "services": [],

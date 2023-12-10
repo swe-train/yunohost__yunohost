@@ -61,10 +61,10 @@ class AppResourceManager:
             try:
                 if todo == "deprovision":
                     # FIXME : i18n, better info strings
-                    logger.info(f"Deprovisionning {name}...")
+                    logger.info(f"Deprovisioning {name}...")
                     old.deprovision(context=context)
                 elif todo == "provision":
-                    logger.info(f"Provisionning {name}...")
+                    logger.info(f"Provisioning {name}...")
                     new.provision_or_update(context=context)
                 elif todo == "update":
                     logger.info(f"Updating {name}...")
@@ -90,10 +90,10 @@ class AppResourceManager:
                     # (NB. here we want to undo the todo)
                     if todo == "deprovision":
                         # FIXME : i18n, better info strings
-                        logger.info(f"Reprovisionning {name}...")
+                        logger.info(f"Reprovisioning {name}...")
                         old.provision_or_update(context=context)
                     elif todo == "provision":
-                        logger.info(f"Deprovisionning {name}...")
+                        logger.info(f"Deprovisioning {name}...")
                         new.deprovision(context=context)
                     elif todo == "update":
                         logger.info(f"Reverting {name}...")
@@ -1106,15 +1106,31 @@ class AptDependenciesAppResource(AppResource):
             if isinstance(values.get("packages"), str):
                 values["packages"] = [value.strip() for value in values["packages"].split(",")]  # type: ignore
 
+            if isinstance(values.get("packages_from_raw_bash"), str):
+                out, err = self.check_output_bash_snippet(
+                    values.get("packages_from_raw_bash")
+                )
+                if err:
+                    logger.error(
+                        f"Error while running apt resource packages_from_raw_bash snippet for '{key}' extras:"
+                    )
+                    logger.error(err)
+                values["packages"] = values.get("packages", []) + [value.strip() for value in out.split("\n")]  # type: ignore
+
             if (
                 not isinstance(values.get("repo"), str)
                 or not isinstance(values.get("key"), str)
                 or not isinstance(values.get("packages"), list)
             ):
                 raise YunohostError(
-                    "In apt resource in the manifest: 'extras' repo should have the keys 'repo', 'key' defined as strings and 'packages' defined as list",
+                    "In apt resource in the manifest: 'extras' repo should have the keys 'repo', 'key' defined as strings, 'packages' defined as list or 'packages_from_raw_bash' defined as string",
                     raw_msg=True,
                 )
+
+            # Drop 'extras' entries associated to no packages
+            self.extras = {
+                key: values for key, values in self.extras.items() if values["packages"]
+            }
 
     def provision_or_update(self, context: Dict = {}):
         script = " ".join(["ynh_install_app_dependencies", *self.packages])
@@ -1337,8 +1353,8 @@ class DatabaseAppResource(AppResource):
 
     def provision_or_update(self, context: Dict = {}):
         # This is equivalent to ynh_sanitize_dbid
-        db_name = self.app.replace("-", "_").replace(".", "_")
-        db_user = db_name
+        db_user = self.app.replace("-", "_").replace(".", "_")
+        db_name = self.get_setting("db_name") or db_user
         self.set_setting("db_name", db_name)
         self.set_setting("db_user", db_user)
 
@@ -1372,8 +1388,8 @@ class DatabaseAppResource(AppResource):
                 )
 
     def deprovision(self, context: Dict = {}):
-        db_name = self.app.replace("-", "_").replace(".", "_")
-        db_user = db_name
+        db_user = self.app.replace("-", "_").replace(".", "_")
+        db_name = self.get_setting("db_name") or db_user
 
         if self.dbtype == "mysql":
             self._run_script(
